@@ -25,6 +25,7 @@ class DockerRegistryClient:
     port = 5000
     ssl = False
     cert = ''
+    STATUS_TIMEOUT = 501
     STATUS_OK = 200
     STATUS_ACCEPT = 202
 
@@ -47,13 +48,17 @@ class DockerRegistryClient:
     def __get(self, path, headers={}):
         url = self.format_url() + path
         #print "url: ", url
-        if self.ssl:
-            if len(self.cert) > 0 :
-                response = requests.get(url, auth=(self.username, self.password), verify=self.cert, headers=headers)
+        timeout = 5
+        try:
+            if self.ssl:
+                if len(self.cert) > 0 :
+                    response = requests.get(url, auth=(self.username, self.password), verify=self.cert, headers=headers, timeout=timeout)
+                else:
+                    response = requests.get(url, auth=(self.username, self.password), verify=False,  headers=headers, timeout=timeout)
             else:
-                response = requests.get(url, auth=(self.username, self.password), verify=False,  headers=headers)
-        else:
-            response = requests.get(url, auth=(self.username, self.password),  headers=headers)
+                response = requests.get(url, auth=(self.username, self.password),  headers=headers, timeout=timeout)
+        except requests.exceptions.ConnectTimeout:
+            return self.STATUS_TIMEOUT, None
         #print "response: ", response
         return response.status_code, response
 
@@ -168,6 +173,6 @@ if __name__ == '__main__':
                 remain = remain - 1
 
         else:
-            print "Fail to get tag list of %s/%s." % (repo)
+            print "Fail to get tag list of %s." % (repo)
 
         i = i + 1
